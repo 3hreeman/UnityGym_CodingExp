@@ -2,20 +2,25 @@
 %TAG !u! tag:unity3d.com,2011:
 --- !u!21 &2100000
 Material:
-  serializedVersion: 6
+  serializedVersion: 8
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: FogOfWar
   m_Shader: {fileID: -6465566751694194690, guid: cddcd6a71a1031b46afc97f9e587ce47, type: 3}
-  m_ShaderKeywords: 
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: 4000
   stringTagMap: {}
-  disabledShaderPasses: []
+  disabledShaderPasses:
+  - MOTIONVECTORS
+  m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
@@ -67,6 +72,10 @@ Material:
         m_Texture: {fileID: 8400000, guid: b991ae3a31ebb3c46b872a5bb24bae36, type: 2}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _SampleTexture2DLOD_aa65af9e67084d629f59b1824f302c1c_Texture_1_Texture2D:
+        m_Texture: {fileID: 8400000, guid: b991ae3a31ebb3c46b872a5bb24bae36, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _SpecGlossMap:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -83,8 +92,10 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    m_Ints: []
     m_Floats:
     - Vector1_3de697039951466ebd1e518e369ebe16: 1
+    - Vector1_74fce60c2ac54a95997818a150c8b5dc: 1
     - Vector1_a2dce0a689b347fa86645463d93db0e4: 80
     - Vector1_df501705a0b24a288542a8e52fea5baf: 2
     - _AlphaClip: 0
@@ -104,6 +115,7 @@ Material:
     - _Metallic: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.005
+    - _QueueControl: 1
     - _QueueOffset: 0
     - _ReceiveShadows: 1
     - _Smoothness: 0.5
@@ -114,6 +126,7 @@ Material:
     - _WorkflowMode: 1
     - _ZWrite: 1
     m_Colors:
+    - Color_4a0e69eb17aa4bf0a3c186b1a024453c: {r: 2, g: 2, b: 2, a: 0}
     - Color_991c49e1a3f24342bf84ca1f74cc668b: {r: 0, g: 0, b: 0, a: 0}
     - Color_9d3ce6f1fb9649138b517d00e54c9f4f: {r: 0.33708617, g: 0.6207809, b: 0.95283014, a: 1}
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
@@ -121,6 +134,7 @@ Material:
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
+  m_AllowLocking: 1
 --- !u!114 &4324068843091311624
 MonoBehaviour:
   m_ObjectHideFlags: 11
@@ -133,4 +147,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d0353a89b1f911e48b9e16bdc9f2e058, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  version: 4
+  version: 9

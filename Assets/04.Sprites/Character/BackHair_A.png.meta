@@ -75,7 +75,7 @@ TextureImporter:
       213: -1282263166148155026
     second: BackHair_A_23
   externalObjects: {}
-  serializedVersion: 11
+  serializedVersion: 13
   mipmaps:
     mipMapMode: 0
     enableMipMap: 0
@@ -92,10 +92,12 @@ TextureImporter:
     externalNormalMap: 0
     heightScale: 0.25
     normalMapFilter: 0
+    flipGreenChannel: 0
   isReadable: 0
   streamingMipmaps: 0
   streamingMipmapsPriority: 0
   vTOnly: 0
+  ignoreMipmapLimit: 0
   grayScaleToAlpha: 0
   generateCubemap: 6
   cubemapConvolution: 0
@@ -134,6 +136,8 @@ TextureImporter:
   textureFormatSet: 0
   ignorePngGamma: 0
   applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 1
   platformSettings:
   - serializedVersion: 3
     buildTarget: DefaultTexturePlatform
@@ -145,6 +149,7 @@ TextureImporter:
     crunchedCompression: 0
     allowsAlphaSplitting: 0
     overridden: 0
+    ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 3
@@ -157,6 +162,7 @@ TextureImporter:
     crunchedCompression: 0
     allowsAlphaSplitting: 0
     overridden: 0
+    ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 3
@@ -169,6 +175,7 @@ TextureImporter:
     crunchedCompression: 0
     allowsAlphaSplitting: 0
     overridden: 0
+    ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 3
@@ -181,6 +188,7 @@ TextureImporter:
     crunchedCompression: 0
     allowsAlphaSplitting: 0
     overridden: 0
+    ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 3
@@ -193,6 +201,7 @@ TextureImporter:
     crunchedCompression: 0
     allowsAlphaSplitting: 0
     overridden: 0
+    ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
@@ -712,9 +721,33 @@ TextureImporter:
     edges: []
     weights: []
     secondaryTextures: []
-  spritePackingTag: 
+    nameFileIdTable:
+      BackHair_A_0: 2551535026127511604
+      BackHair_A_1: 3977170949977436877
+      BackHair_A_10: 8414267888016022262
+      BackHair_A_11: -4910441798819249847
+      BackHair_A_12: -5177615889399805555
+      BackHair_A_13: -3871062462078584611
+      BackHair_A_14: -683744314685033663
+      BackHair_A_15: 1723244843699112104
+      BackHair_A_16: 2977873649421703700
+      BackHair_A_17: -4844978929033204751
+      BackHair_A_18: -5982618741654934526
+      BackHair_A_19: -3639901199274373920
+      BackHair_A_2: -1059993061486119531
+      BackHair_A_20: -5836000061541841719
+      BackHair_A_21: -8020113330407934058
+      BackHair_A_22: -2558607656656444443
+      BackHair_A_23: -1282263166148155026
+      BackHair_A_3: -7753943564303734727
+      BackHair_A_4: 519529502224604336
+      BackHair_A_5: -7882208561201141068
+      BackHair_A_6: -2330661809516136227
+      BackHair_A_7: -5830847217249740458
+      BackHair_A_8: -4412806478040746742
+      BackHair_A_9: 2349940353860512538
+  mipmapLimitGroupName: 
   pSDRemoveMatte: 0
-  pSDShowRemoveMatteOption: 0
   userData: 
   assetBundleName: 
   assetBundleVariant: 
