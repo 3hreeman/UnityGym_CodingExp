@@ -1,10 +1,16 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Cinemachine;
+using Unity.Burst;
+using UnityEngine.Jobs;
+using Random = UnityEngine.Random;
 
 public class Boids : MonoBehaviour
 {
+    public static Boids instance;
+    
     #region Variables & Initializer
     [Header("Boid Options")]
     [SerializeField] private BoidUnit boidUnitPrefab;
@@ -46,6 +52,17 @@ public class Boids : MonoBehaviour
     public float enemyPercentage = 0.01f;
     public Color[] GizmoColors;
 
+    public List<BoidUnit> boidList = new List<BoidUnit>();
+    
+    public BoidUpdater boidUpdater;
+    
+    public bool UseJob = false;
+
+    
+    private void Awake() {
+        instance = this;
+    }
+
     void Start()
     {
         // Generate Boids
@@ -58,34 +75,45 @@ public class Boids : MonoBehaviour
             BoidUnit currUnit = Instantiate(boidUnitPrefab, this.transform.position+ randomVec, randomRot);
             currUnit.transform.SetParent(this.transform);
             currUnit.InitializeUnit(this,Random.Range(speedRange.x, speedRange.y),i);
+            boidList.Add(currUnit);
         }
+        boidUpdater.Init(this);
     }
     #endregion
 
     void Update()
     {
+        UpdateInput();
+        UpdateCamera();
+
+        // we can see curr Unit's neighbour & target Vector
+        if (currUnit) {
+            currUnit.DrawVectorGizmo(0);
+        }
+        
+        // can see bounds
+        boundMR.enabled = ShowBounds;
+        
+        if(UseJob) 
+            boidUpdater.UpdateJob();
+    }
+
+    private void UpdateInput() {
         // Right Mouse button Down, Set the unit to currUnit
-        if (Input.GetMouseButtonDown(1))
-        {
+        if (Input.GetMouseButtonDown(1)) {
             RaycastHit hit;
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             Debug.DrawLine(ray.origin, ray.origin + ray.direction * 1000, Color.red, 3f);
-            if (Physics.Raycast(ray, out hit, Mathf.Infinity, unitLayer))
-            {
+            if (Physics.Raycast(ray, out hit, Mathf.Infinity, unitLayer)) {
                 currUnit = hit.transform.GetComponent<BoidUnit>();
             }
-            else
-            {
+            else {
                 currUnit = null;
             }
         }
+    }
 
-        // we can see curr Unit's neighbour & target Vector
-        if (currUnit)
-        {
-            currUnit.DrawVectorGizmo(0);
-        }
-
+    private void UpdateCamera() {
         // camera switch
         if (cameraFollowUnit && currUnit != null)
         {
@@ -99,8 +127,5 @@ public class Boids : MonoBehaviour
             originCam.gameObject.SetActive(true);
             unitCam.gameObject.SetActive(false);
         }
-
-        // can see bounds
-        boundMR.enabled = ShowBounds;
     }
 }

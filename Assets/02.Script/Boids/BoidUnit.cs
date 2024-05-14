@@ -4,16 +4,25 @@ using UnityEngine;
 
 public class BoidUnit : MonoBehaviour
 {
+    public struct MoveData {
+        public float speed;
+        public float additionalSpeed; 
+        public Vector3 targetVec;
+        public Vector3 cohesionVec;
+        public Vector3 alignmentVec;
+        public Vector3 separationVec;
+        
+        public Vector3 boundsVec;
+        public Vector3 obstacleVec;
+        public Vector3 egoVec;
+        public Vector3 egoVector;
+    }
+    
     #region Variables & Initializer
     [Header("Info")]
     Boids myBoids;
     List<BoidUnit> neighbours = new List<BoidUnit>();
 
-    Vector3 targetVec;
-    Vector3 egoVector;
-    float speed;
-
-    float additionalSpeed = 0;
     bool isEnemy;
 
     MeshRenderer myMeshRenderer;
@@ -32,11 +41,14 @@ public class BoidUnit : MonoBehaviour
 
     Coroutine findNeighbourCoroutine;
     Coroutine calculateEgoVectorCoroutine;
-    public void InitializeUnit(Boids _boids, float _speed, int _myIndex)
-    {
+    
+    public MoveData moveData;
+    public void InitializeUnit(Boids _boids, float _speed, int _myIndex) {
+        moveData = new MoveData();
         myBoids = _boids;
-        speed = _speed;
-
+        moveData.speed = _speed;
+        moveData.additionalSpeed = 0;
+        
         myTrailRenderer = GetComponentInChildren<TrailRenderer>();
         myMeshRenderer = GetComponentInChildren<MeshRenderer>();
 
@@ -70,38 +82,91 @@ public class BoidUnit : MonoBehaviour
 
     #endregion
 
-    void Update()
-    {
-        if (additionalSpeed > 0)
-            additionalSpeed -= Time.deltaTime;
+    void Update() {
+        if (Boids.instance.UseJob) {
+            UpdateForJob();
+        }
+        else { 
+            UpdateForSelf();
+        }
+    }
+
+    public void UpdateForSelf() {
+        if (moveData.additionalSpeed > 0)
+            moveData.additionalSpeed -= Time.deltaTime;
 
         // Calculate all the vectors we need
-        Vector3 cohesionVec = CalculateCohesionVector()*myBoids.cohesionWeight;
-        Vector3 alignmentVec = CalculateAlignmentVector() * myBoids.alignmentWeight;
-        Vector3 separationVec = CalculateSeparationVector() * myBoids.separationWeight;
+        moveData.cohesionVec = CalculateCohesionVector()*myBoids.cohesionWeight;
+        moveData.alignmentVec = CalculateAlignmentVector() * myBoids.alignmentWeight;
+        moveData.separationVec = CalculateSeparationVector() * myBoids.separationWeight;
         // 추가적인 방향
-        Vector3 boundsVec = CalculateBoundsVector() * myBoids.boundsWeight;
-        Vector3 obstacleVec = CalculateObstacleVector() * myBoids.obstacleWeight;
-        Vector3 egoVec = egoVector * myBoids.egoWeight;
+        moveData.boundsVec = CalculateBoundsVector() * myBoids.boundsWeight;
+        moveData.obstacleVec = CalculateObstacleVector() * myBoids.obstacleWeight;
+        moveData.egoVec = moveData.egoVector * myBoids.egoWeight;
 
         if (isEnemy)
         {
-            targetVec = boundsVec + obstacleVec + egoVector;
+            moveData.targetVec = moveData.boundsVec + moveData.obstacleVec + moveData.egoVector;
         }
         else
         {
-            targetVec = cohesionVec + alignmentVec + separationVec + boundsVec + obstacleVec + egoVec;
+            moveData.targetVec = moveData.cohesionVec + moveData.alignmentVec + moveData.separationVec + moveData.boundsVec + moveData.obstacleVec + moveData.egoVec;
         }
 
         // Steer and Move
-        targetVec = Vector3.Lerp(this.transform.forward, targetVec, Time.deltaTime);
-        targetVec = targetVec.normalized;
-        if (targetVec == Vector3.zero)
-            targetVec = egoVector;
+        moveData.targetVec = Vector3.Lerp(this.transform.forward, moveData.targetVec, Time.deltaTime);
+        moveData.targetVec = moveData.targetVec.normalized;
+        if (moveData.targetVec == Vector3.zero)
+            moveData.targetVec = moveData.egoVector;
 
-        this.transform.rotation = Quaternion.LookRotation(targetVec);
-        this.transform.position += targetVec * (speed + additionalSpeed) * Time.deltaTime;
+        this.transform.rotation = Quaternion.LookRotation(moveData.targetVec);
+        this.transform.position += moveData.targetVec * (moveData.speed + moveData.additionalSpeed) * Time.deltaTime;
 
+
+        // Color Lerp
+        if (myBoids.protectiveColor && !isEnemy && neighbours.Count > 0)
+        {
+            Vector3 colorSum = new Vector3(myColor.r, myColor.g, myColor.b);
+            for (int i = 0; i < neighbours.Count; i++)
+            {
+                Color tmpColor = neighbours[i].myColor;
+                colorSum += new Vector3(tmpColor.r, tmpColor.g, tmpColor.b);
+            }
+            myMeshRenderer.material.color = Color.Lerp(myMeshRenderer.material.color, new Color(colorSum.x / neighbours.Count, colorSum.y / neighbours.Count, colorSum.z / neighbours.Count, 1f), Time.deltaTime);
+        }
+        else
+        {
+            myMeshRenderer.material.color = Color.Lerp(myMeshRenderer.material.color, myColor, Time.deltaTime);
+        }
+    }
+
+    public void UpdateForJob() {
+        if (moveData.additionalSpeed > 0)
+            moveData.additionalSpeed -= Time.deltaTime;
+
+        // Calculate all the vectors we need
+        moveData.cohesionVec = CalculateCohesionVector()*myBoids.cohesionWeight;
+        moveData.alignmentVec = CalculateAlignmentVector() * myBoids.alignmentWeight;
+        moveData.separationVec = CalculateSeparationVector() * myBoids.separationWeight;
+        // 추가적인 방향
+        moveData.boundsVec = CalculateBoundsVector() * myBoids.boundsWeight;
+        moveData.obstacleVec = CalculateObstacleVector() * myBoids.obstacleWeight;
+        moveData.egoVec = moveData.egoVector * myBoids.egoWeight;
+
+        if (isEnemy)
+        {
+            moveData.targetVec = moveData.boundsVec + moveData.obstacleVec + moveData.egoVector;
+        }
+        else
+        {
+            moveData.targetVec = moveData.cohesionVec + moveData.alignmentVec + moveData.separationVec + moveData.boundsVec + moveData.obstacleVec + moveData.egoVec;
+        }
+
+        // Steer and Move
+        moveData.targetVec = Vector3.Lerp(this.transform.forward, moveData.targetVec, Time.deltaTime);
+        moveData.targetVec = moveData.targetVec.normalized;
+        if (moveData.targetVec == Vector3.zero)
+            moveData.targetVec = moveData.egoVector;
 
         // Color Lerp
         if (myBoids.protectiveColor && !isEnemy && neighbours.Count > 0)
@@ -124,8 +189,8 @@ public class BoidUnit : MonoBehaviour
     #region Calculate Vectors
     IEnumerator CalculateEgoVectorCoroutine()
     {
-        speed = Random.Range(myBoids.speedRange.x, myBoids.speedRange.y);
-        egoVector = Random.insideUnitSphere;
+        moveData.speed = Random.Range(myBoids.speedRange.x, myBoids.speedRange.y);
+        moveData.egoVector = Random.insideUnitSphere;
         yield return new WaitForSeconds(Random.Range(1, 3f));
         calculateEgoVectorCoroutine = StartCoroutine("CalculateEgoVectorCoroutine");
     }
@@ -229,7 +294,7 @@ public class BoidUnit : MonoBehaviour
         {
             Debug.DrawLine(transform.position, hit.point, Color.black);
             obstacleVec = hit.normal;
-            additionalSpeed = 10;
+            moveData.additionalSpeed = 10;
         }
         return obstacleVec;
     }
@@ -244,7 +309,7 @@ public class BoidUnit : MonoBehaviour
                 neighbours[i].DrawVectorGizmo(_depth + 1);
 
             Debug.DrawLine(this.transform.position, neighbours[i].transform.position, myBoids.GizmoColors[_depth + 1]);
-            Debug.DrawLine(this.transform.position, this.transform.position + targetVec, myBoids.GizmoColors[0]);
+            Debug.DrawLine(this.transform.position, this.transform.position + moveData.targetVec, myBoids.GizmoColors[0]);
         }
     }
 }
