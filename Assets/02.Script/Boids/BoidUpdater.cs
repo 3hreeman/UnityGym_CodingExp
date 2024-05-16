@@ -53,6 +53,8 @@ public class BoidUpdater : MonoBehaviour {
         public float jobDeltaTime;
         
         public void Execute(int index, TransformAccess transform) {
+            var data = targetData[index];
+            
             transform.rotation = Quaternion.LookRotation(targetData[index].targetVec);
             transform.position += targetData[index].targetVec * (targetData[index].speed + targetData[index].additionalSpeed) * jobDeltaTime;
         }

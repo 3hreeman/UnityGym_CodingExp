@@ -1,26 +1,28 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
-public class BoidUnit : MonoBehaviour
-{
+public class BoidUnit : MonoBehaviour {
     public struct MoveData {
         public float speed;
-        public float additionalSpeed; 
+        public float additionalSpeed;
         public Vector3 targetVec;
         public Vector3 cohesionVec;
         public Vector3 alignmentVec;
         public Vector3 separationVec;
-        
+
         public Vector3 boundsVec;
         public Vector3 obstacleVec;
         public Vector3 egoVec;
         public Vector3 egoVector;
     }
-    
+
     #region Variables & Initializer
-    [Header("Info")]
-    Boids myBoids;
+
+    [Header("Info")] Boids myBoids;
     List<BoidUnit> neighbours = new List<BoidUnit>();
 
     bool isEnemy;
@@ -29,55 +31,84 @@ public class BoidUnit : MonoBehaviour
     TrailRenderer myTrailRenderer;
     [SerializeField] private Color myColor;
 
-    [Header("Neighbour")]
-    [SerializeField] float obstacleDistance;
-    [SerializeField] float FOVAngle=120;
+    [Header("Neighbour")] [SerializeField] float obstacleDistance;
+    [SerializeField] float FOVAngle = 120;
     [SerializeField] float maxNeighbourCount = 50;
     [SerializeField] float neighbourDistance = 10;
 
-    [Header("ETC")]
-    [SerializeField] LayerMask boidUnitLayer;
+    [Header("ETC")] [SerializeField] LayerMask boidUnitLayer;
     [SerializeField] LayerMask obstacleLayer;
 
     Coroutine findNeighbourCoroutine;
     Coroutine calculateEgoVectorCoroutine;
-    
+
     public MoveData moveData;
+
     public void InitializeUnit(Boids _boids, float _speed, int _myIndex) {
         moveData = new MoveData();
         myBoids = _boids;
         moveData.speed = _speed;
         moveData.additionalSpeed = 0;
-        
+
         myTrailRenderer = GetComponentInChildren<TrailRenderer>();
         myMeshRenderer = GetComponentInChildren<MeshRenderer>();
 
         // set Color
-        if (myBoids.randomColor)
-        {
+        if (myBoids.randomColor) {
             myColor = new Color(Random.value, Random.value, Random.value);
             myMeshRenderer.material.color = myColor;
         }
-        else if (myBoids.blackAndWhite)
-        {
+        else if (myBoids.blackAndWhite) {
             float myIndexFloat = _myIndex;
-            myColor = new Color(myIndexFloat / myBoids.boidCount, myIndexFloat / myBoids.boidCount, myIndexFloat / myBoids.boidCount, 1f);
+            myColor = new Color(myIndexFloat / myBoids.boidCount, myIndexFloat / myBoids.boidCount,
+                myIndexFloat / myBoids.boidCount, 1f);
         }
-        else
-        {
+        else {
             myColor = myMeshRenderer.material.color;
         }
 
         // is Enemy?
-        if (Random.Range(0, 1f) < myBoids.enemyPercentage)
-        {
+        if (Random.Range(0, 1f) < myBoids.enemyPercentage) {
             myColor = new Color(1, 0, 0);
             isEnemy = true;
             transform.gameObject.layer = LayerMask.NameToLayer("Obstacle");
         }
 
-        findNeighbourCoroutine = StartCoroutine("FindNeighbourCoroutine");
-        calculateEgoVectorCoroutine = StartCoroutine("CalculateEgoVectorCoroutine");
+        if (Boids.instance.UseUniTask) {
+            FindNeighbour().Forget();
+            CalcEgoVector().Forget();
+        }
+        else {
+            findNeighbourCoroutine = StartCoroutine(FindNeighbourCoroutine());
+            calculateEgoVectorCoroutine = StartCoroutine(CalculateEgoVectorCoroutine());
+        }
+    }
+
+    public async UniTask FindNeighbour() {
+        while (true) {
+            neighbours.Clear();
+
+            Collider[] colls = Physics.OverlapSphere(transform.position, neighbourDistance, boidUnitLayer);
+            for (int i = 0; i < colls.Length; i++) {
+                if (Vector3.Angle(transform.forward, colls[i].transform.position - transform.position) <= FOVAngle) {
+                    neighbours.Add(colls[i].GetComponent<BoidUnit>());
+                }
+
+                if (i > maxNeighbourCount) {
+                    break;
+                }
+            }
+
+            await UniTask.Delay(TimeSpan.FromSeconds(Random.Range(0.5f, 2f)));
+        }
+    }
+
+    public async UniTask CalcEgoVector() {
+        while (true) {
+            moveData.speed = Random.Range(myBoids.speedRange.x, myBoids.speedRange.y);
+            moveData.egoVector = Random.insideUnitSphere;
+            await UniTask.Delay(TimeSpan.FromSeconds(Random.Range(1f, 3f)));
+        }
     }
 
     #endregion
@@ -86,7 +117,7 @@ public class BoidUnit : MonoBehaviour
         if (Boids.instance.UseJob) {
             UpdateForJob();
         }
-        else { 
+        else {
             UpdateForSelf();
         }
     }
@@ -96,21 +127,20 @@ public class BoidUnit : MonoBehaviour
             moveData.additionalSpeed -= Time.deltaTime;
 
         // Calculate all the vectors we need
-        moveData.cohesionVec = CalculateCohesionVector()*myBoids.cohesionWeight;
+        moveData.cohesionVec = CalculateCohesionVector() * myBoids.cohesionWeight;
         moveData.alignmentVec = CalculateAlignmentVector() * myBoids.alignmentWeight;
         moveData.separationVec = CalculateSeparationVector() * myBoids.separationWeight;
-        // Ãß°¡ÀûÀÎ ¹æÇâ
+        // ï¿½ß°ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         moveData.boundsVec = CalculateBoundsVector() * myBoids.boundsWeight;
         moveData.obstacleVec = CalculateObstacleVector() * myBoids.obstacleWeight;
         moveData.egoVec = moveData.egoVector * myBoids.egoWeight;
 
-        if (isEnemy)
-        {
+        if (isEnemy) {
             moveData.targetVec = moveData.boundsVec + moveData.obstacleVec + moveData.egoVector;
         }
-        else
-        {
-            moveData.targetVec = moveData.cohesionVec + moveData.alignmentVec + moveData.separationVec + moveData.boundsVec + moveData.obstacleVec + moveData.egoVec;
+        else {
+            moveData.targetVec = moveData.cohesionVec + moveData.alignmentVec + moveData.separationVec +
+                                 moveData.boundsVec + moveData.obstacleVec + moveData.egoVec;
         }
 
         // Steer and Move
@@ -124,18 +154,18 @@ public class BoidUnit : MonoBehaviour
 
 
         // Color Lerp
-        if (myBoids.protectiveColor && !isEnemy && neighbours.Count > 0)
-        {
+        if (myBoids.protectiveColor && !isEnemy && neighbours.Count > 0) {
             Vector3 colorSum = new Vector3(myColor.r, myColor.g, myColor.b);
-            for (int i = 0; i < neighbours.Count; i++)
-            {
+            for (int i = 0; i < neighbours.Count; i++) {
                 Color tmpColor = neighbours[i].myColor;
                 colorSum += new Vector3(tmpColor.r, tmpColor.g, tmpColor.b);
             }
-            myMeshRenderer.material.color = Color.Lerp(myMeshRenderer.material.color, new Color(colorSum.x / neighbours.Count, colorSum.y / neighbours.Count, colorSum.z / neighbours.Count, 1f), Time.deltaTime);
+
+            myMeshRenderer.material.color = Color.Lerp(myMeshRenderer.material.color,
+                new Color(colorSum.x / neighbours.Count, colorSum.y / neighbours.Count, colorSum.z / neighbours.Count,
+                    1f), Time.deltaTime);
         }
-        else
-        {
+        else {
             myMeshRenderer.material.color = Color.Lerp(myMeshRenderer.material.color, myColor, Time.deltaTime);
         }
     }
@@ -145,21 +175,20 @@ public class BoidUnit : MonoBehaviour
             moveData.additionalSpeed -= Time.deltaTime;
 
         // Calculate all the vectors we need
-        moveData.cohesionVec = CalculateCohesionVector()*myBoids.cohesionWeight;
+        moveData.cohesionVec = CalculateCohesionVector() * myBoids.cohesionWeight;
         moveData.alignmentVec = CalculateAlignmentVector() * myBoids.alignmentWeight;
         moveData.separationVec = CalculateSeparationVector() * myBoids.separationWeight;
-        // Ãß°¡ÀûÀÎ ¹æÇâ
+        // ï¿½ß°ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         moveData.boundsVec = CalculateBoundsVector() * myBoids.boundsWeight;
         moveData.obstacleVec = CalculateObstacleVector() * myBoids.obstacleWeight;
         moveData.egoVec = moveData.egoVector * myBoids.egoWeight;
 
-        if (isEnemy)
-        {
+        if (isEnemy) {
             moveData.targetVec = moveData.boundsVec + moveData.obstacleVec + moveData.egoVector;
         }
-        else
-        {
-            moveData.targetVec = moveData.cohesionVec + moveData.alignmentVec + moveData.separationVec + moveData.boundsVec + moveData.obstacleVec + moveData.egoVec;
+        else {
+            moveData.targetVec = moveData.cohesionVec + moveData.alignmentVec + moveData.separationVec +
+                                 moveData.boundsVec + moveData.obstacleVec + moveData.egoVec;
         }
 
         // Steer and Move
@@ -169,88 +198,80 @@ public class BoidUnit : MonoBehaviour
             moveData.targetVec = moveData.egoVector;
 
         // Color Lerp
-        if (myBoids.protectiveColor && !isEnemy && neighbours.Count > 0)
-        {
+        if (myBoids.protectiveColor && !isEnemy && neighbours.Count > 0) {
             Vector3 colorSum = new Vector3(myColor.r, myColor.g, myColor.b);
-            for (int i = 0; i < neighbours.Count; i++)
-            {
+            for (int i = 0; i < neighbours.Count; i++) {
                 Color tmpColor = neighbours[i].myColor;
                 colorSum += new Vector3(tmpColor.r, tmpColor.g, tmpColor.b);
             }
-            myMeshRenderer.material.color = Color.Lerp(myMeshRenderer.material.color, new Color(colorSum.x / neighbours.Count, colorSum.y / neighbours.Count, colorSum.z / neighbours.Count, 1f), Time.deltaTime);
+
+            myMeshRenderer.material.color = Color.Lerp(myMeshRenderer.material.color,
+                new Color(colorSum.x / neighbours.Count, colorSum.y / neighbours.Count, colorSum.z / neighbours.Count,
+                    1f), Time.deltaTime);
         }
-        else
-        {
+        else {
             myMeshRenderer.material.color = Color.Lerp(myMeshRenderer.material.color, myColor, Time.deltaTime);
         }
     }
 
 
     #region Calculate Vectors
-    IEnumerator CalculateEgoVectorCoroutine()
-    {
+
+    IEnumerator CalculateEgoVectorCoroutine() {
         moveData.speed = Random.Range(myBoids.speedRange.x, myBoids.speedRange.y);
         moveData.egoVector = Random.insideUnitSphere;
         yield return new WaitForSeconds(Random.Range(1, 3f));
         calculateEgoVectorCoroutine = StartCoroutine("CalculateEgoVectorCoroutine");
     }
-    IEnumerator FindNeighbourCoroutine()
-    {
+
+    IEnumerator FindNeighbourCoroutine() {
         neighbours.Clear();
 
         Collider[] colls = Physics.OverlapSphere(transform.position, neighbourDistance, boidUnitLayer);
-        for (int i = 0; i < colls.Length; i++)
-        {
-            if (Vector3.Angle(transform.forward, colls[i].transform.position - transform.position) <= FOVAngle)
-            {
+        for (int i = 0; i < colls.Length; i++) {
+            if (Vector3.Angle(transform.forward, colls[i].transform.position - transform.position) <= FOVAngle) {
                 neighbours.Add(colls[i].GetComponent<BoidUnit>());
             }
-            if (i > maxNeighbourCount)
-            {
+
+            if (i > maxNeighbourCount) {
                 break;
             }
         }
+
         yield return new WaitForSeconds(Random.Range(0.5f, 2f));
         findNeighbourCoroutine = StartCoroutine("FindNeighbourCoroutine");
     }
-    private Vector3 CalculateCohesionVector()
-    {
+
+    private Vector3 CalculateCohesionVector() {
         Vector3 cohesionVec = Vector3.zero;
-        if (neighbours.Count > 0)
-        {
-            // ÀÌ¿ô unitµéÀÇ À§Ä¡ ´õÇÏ±â
-            for(int i = 0; i < neighbours.Count; i++)
-            {
+        if (neighbours.Count > 0) {
+            // ï¿½Ì¿ï¿½ unitï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ ï¿½ï¿½ï¿½Ï±ï¿½
+            for (int i = 0; i < neighbours.Count; i++) {
                 cohesionVec += neighbours[i].transform.position;
             }
         }
-        else
-        {
-            // ÀÌ¿ôÀÌ ¾øÀ¸¸é vector3.zero ¹ÝÈ¯
+        else {
+            // ï¿½Ì¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ vector3.zero ï¿½ï¿½È¯
             return cohesionVec;
         }
 
-        // Áß½É À§Ä¡·ÎÀÇ º¤ÅÍ Ã£±â
+        // ï¿½ß½ï¿½ ï¿½ï¿½Ä¡ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Ã£ï¿½ï¿½
         cohesionVec /= neighbours.Count;
         cohesionVec -= transform.position;
         cohesionVec.Normalize();
         return cohesionVec;
     }
 
-    private Vector3 CalculateAlignmentVector()
-    {
+    private Vector3 CalculateAlignmentVector() {
         Vector3 alignmentVec = transform.forward;
-        if (neighbours.Count > 0)
-        {
-            // ÀÌ¿ôµéÀÌ ÇâÇÏ´Â ¹æÇâÀÇ Æò±Õ ¹æÇâÀ¸·Î ÀÌµ¿
-            for(int i = 0; i < neighbours.Count; i++)
-            {
+        if (neighbours.Count > 0) {
+            // ï¿½Ì¿ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ï´ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ìµï¿½
+            for (int i = 0; i < neighbours.Count; i++) {
                 alignmentVec += neighbours[i].transform.forward;
             }
         }
-        else
-        {
-            // ÀÌ¿ôÀÌ ¾øÀ¸¸é ±×³É forward·Î ÀÌµ¿
+        else {
+            // ï¿½Ì¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½×³ï¿½ forwardï¿½ï¿½ ï¿½Ìµï¿½
             return alignmentVec;
         }
 
@@ -259,57 +280,52 @@ public class BoidUnit : MonoBehaviour
         return alignmentVec;
     }
 
-    private Vector3 CalculateSeparationVector()
-    {
+    private Vector3 CalculateSeparationVector() {
         Vector3 separationVec = Vector3.zero;
-        if (neighbours.Count > 0)
-        {
-            // ÀÌ¿ôµéÀ» ÇÇÇÏ´Â ¹æÇâÀ¸·Î ÀÌµ¿
-            for(int i = 0; i < neighbours.Count; i++)
-            {
+        if (neighbours.Count > 0) {
+            // ï¿½Ì¿ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ï´ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ìµï¿½
+            for (int i = 0; i < neighbours.Count; i++) {
                 separationVec += (transform.position - neighbours[i].transform.position);
             }
         }
-        else
-        {
-            // ÀÌ¿ôÀÌ ¾øÀ¸¸é vector.zero ¹ÝÈ¯
+        else {
+            // ï¿½Ì¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ vector.zero ï¿½ï¿½È¯
             return separationVec;
         }
+
         separationVec /= neighbours.Count;
         separationVec.Normalize();
         return separationVec;
     }
 
-    private Vector3 CalculateBoundsVector()
-    {
+    private Vector3 CalculateBoundsVector() {
         Vector3 offsetToCenter = myBoids.transform.position - transform.position;
         return offsetToCenter.magnitude >= myBoids.spawnRange ? offsetToCenter.normalized : Vector3.zero;
     }
 
-    private Vector3 CalculateObstacleVector()
-    {
+    private Vector3 CalculateObstacleVector() {
         Vector3 obstacleVec = Vector3.zero;
         RaycastHit hit;
-        if(Physics.Raycast(transform.position,transform.forward,out hit, obstacleDistance, obstacleLayer))
-        {
+        if (Physics.Raycast(transform.position, transform.forward, out hit, obstacleDistance, obstacleLayer)) {
             Debug.DrawLine(transform.position, hit.point, Color.black);
             obstacleVec = hit.normal;
             moveData.additionalSpeed = 10;
         }
+
         return obstacleVec;
     }
-#endregion
+
+    #endregion
 
 
-    public void DrawVectorGizmo(int _depth)
-    {
-        for (int i = 0; i < neighbours.Count; i++)
-        {
+    public void DrawVectorGizmo(int _depth) {
+        for (int i = 0; i < neighbours.Count; i++) {
             if (_depth + 1 < myBoids.GizmoColors.Length - 1)
                 neighbours[i].DrawVectorGizmo(_depth + 1);
 
             Debug.DrawLine(this.transform.position, neighbours[i].transform.position, myBoids.GizmoColors[_depth + 1]);
-            Debug.DrawLine(this.transform.position, this.transform.position + moveData.targetVec, myBoids.GizmoColors[0]);
+            Debug.DrawLine(this.transform.position, this.transform.position + moveData.targetVec,
+                myBoids.GizmoColors[0]);
         }
     }
 }

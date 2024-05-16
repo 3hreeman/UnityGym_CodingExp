@@ -1,10 +1,6 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Cinemachine;
-using Unity.Burst;
-using UnityEngine.Jobs;
 using Random = UnityEngine.Random;
 
 public class Boids : MonoBehaviour
@@ -55,7 +51,8 @@ public class Boids : MonoBehaviour
     public List<BoidUnit> boidList = new List<BoidUnit>();
     
     public BoidUpdater boidUpdater;
-    
+
+    public bool UseUniTask = false;
     public bool UseJob = false;
 
     
