@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
+using Unity.Collections;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -74,14 +75,20 @@ public class BoidUnit : MonoBehaviour {
             transform.gameObject.layer = LayerMask.NameToLayer("Obstacle");
         }
 
-        if (Boids.instance.UseUniTask) {
-            FindNeighbour().Forget();
-            CalcEgoVector().Forget();
+        if (Boids.instance.UseJob) {
+            //do nothing
         }
         else {
-            findNeighbourCoroutine = StartCoroutine(FindNeighbourCoroutine());
-            calculateEgoVectorCoroutine = StartCoroutine(CalculateEgoVectorCoroutine());
+            if (Boids.instance.UseUniTask) {
+                FindNeighbour().Forget();
+                CalcEgoVector().Forget();
+            }
+            else {
+                findNeighbourCoroutine = StartCoroutine(FindNeighbourCoroutine());
+                calculateEgoVectorCoroutine = StartCoroutine(CalculateEgoVectorCoroutine());
+            }            
         }
+
     }
 
     public async UniTask FindNeighbour() {
@@ -114,12 +121,12 @@ public class BoidUnit : MonoBehaviour {
     #endregion
 
     void Update() {
-        if (Boids.instance.UseJob) {
-            UpdateForJob();
-        }
-        else {
-            UpdateForSelf();
-        }
+        // if (Boids.instance.UseJob) {
+        //     UpdateForJob();
+        // }
+        // else {
+        //     UpdateForSelf();
+        // }
     }
 
     public void UpdateForSelf() {
@@ -170,6 +177,14 @@ public class BoidUnit : MonoBehaviour {
         }
     }
 
+    public void UpdateNeighbor(NativeArray<int> neighborList) {
+        neighbours.Clear();
+        for (int i = 0; i < neighborList.Length; i++) {
+            if(neighborList[i] == -1) break;
+            neighbours.Add(Boids.instance.boidList[neighborList[i]]);
+        }
+    }
+    
     public void UpdateForJob() {
         if (moveData.additionalSpeed > 0)
             moveData.additionalSpeed -= Time.deltaTime;
